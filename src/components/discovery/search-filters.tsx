@@ -20,6 +20,8 @@ import { PRICE_TYPE_LABEL, SERVICE_MODE_LABEL } from '@/lib/format'
 import type { City } from '@/lib/locations'
 import type { PriceType, ServiceMode } from '@/lib/services'
 
+export type SearchFiltersScope = 'services' | 'providers'
+
 export type SearchFiltersValue = {
   cityId?: number
   minPriceCents?: number
@@ -66,11 +68,13 @@ export function SearchFilters({
   city,
   onApply,
   hasCoordinates,
+  scope = 'services',
 }: {
   value: SearchFiltersValue
   city?: City | null
   onApply: (next: SearchFiltersValue) => void
   hasCoordinates: boolean
+  scope?: SearchFiltersScope
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
@@ -120,8 +124,9 @@ export function SearchFilters({
         <SheetHeader>
           <SheetTitle>Filtros</SheetTitle>
           <SheetDescription>
-            Refine os resultados por localização, preço, avaliação e forma de
-            atendimento.
+            {scope === 'providers'
+              ? 'Refine os profissionais por localização e avaliação.'
+              : 'Refine os resultados por localização, preço, avaliação e forma de atendimento.'}
           </SheetDescription>
         </SheetHeader>
 
@@ -135,43 +140,49 @@ export function SearchFilters({
             />
           </fieldset>
 
-          <Separator />
+          {scope === 'services' ? (
+            <>
+              <Separator />
 
-          <fieldset className="grid gap-3">
-            <legend className="mb-1 text-sm font-bold">Faixa de preço</legend>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="filter-price-min">Mínimo (R$)</Label>
-                <Input
-                  id="filter-price-min"
-                  inputMode="decimal"
-                  placeholder="0"
-                  defaultValue={toReais(draft.minPriceCents)}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      minPriceCents: toCents(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="filter-price-max">Máximo (R$)</Label>
-                <Input
-                  id="filter-price-max"
-                  inputMode="decimal"
-                  placeholder="Sem limite"
-                  defaultValue={toReais(draft.maxPriceCents)}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      maxPriceCents: toCents(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          </fieldset>
+              <fieldset className="grid gap-3">
+                <legend className="mb-1 text-sm font-bold">
+                  Faixa de preço
+                </legend>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-price-min">Mínimo (R$)</Label>
+                    <Input
+                      id="filter-price-min"
+                      inputMode="decimal"
+                      placeholder="0"
+                      defaultValue={toReais(draft.minPriceCents)}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          minPriceCents: toCents(event.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="filter-price-max">Máximo (R$)</Label>
+                    <Input
+                      id="filter-price-max"
+                      inputMode="decimal"
+                      placeholder="Sem limite"
+                      defaultValue={toReais(draft.maxPriceCents)}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          maxPriceCents: toCents(event.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </fieldset>
+            </>
+          ) : null}
 
           <Separator />
 
@@ -200,63 +211,69 @@ export function SearchFilters({
             </RadioGroup>
           </fieldset>
 
-          <Separator />
+          {scope === 'services' ? (
+            <>
+              <Separator />
 
-          <fieldset className="grid gap-3">
-            <legend className="mb-1 text-sm font-bold">Atendimento</legend>
-            <RadioGroup
-              value={draft.mode ?? ''}
-              onValueChange={(next) =>
-                setDraft((current) => ({
-                  ...current,
-                  mode: next ? (next as ServiceMode) : undefined,
-                }))
-              }
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="" id="mode-any" />
-                <Label htmlFor="mode-any">Qualquer forma</Label>
-              </div>
-              {(
-                Object.keys(SERVICE_MODE_LABEL) as ServiceMode[]
-              ).map((mode) => (
-                <div key={mode} className="flex items-center gap-2">
-                  <RadioGroupItem value={mode} id={`mode-${mode}`} />
-                  <Label htmlFor={`mode-${mode}`}>
-                    {SERVICE_MODE_LABEL[mode]}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </fieldset>
+              <fieldset className="grid gap-3">
+                <legend className="mb-1 text-sm font-bold">Atendimento</legend>
+                <RadioGroup
+                  value={draft.mode ?? ''}
+                  onValueChange={(next) =>
+                    setDraft((current) => ({
+                      ...current,
+                      mode: next ? (next as ServiceMode) : undefined,
+                    }))
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="" id="mode-any" />
+                    <Label htmlFor="mode-any">Qualquer forma</Label>
+                  </div>
+                  {(Object.keys(SERVICE_MODE_LABEL) as ServiceMode[]).map(
+                    (mode) => (
+                      <div key={mode} className="flex items-center gap-2">
+                        <RadioGroupItem value={mode} id={`mode-${mode}`} />
+                        <Label htmlFor={`mode-${mode}`}>
+                          {SERVICE_MODE_LABEL[mode]}
+                        </Label>
+                      </div>
+                    ),
+                  )}
+                </RadioGroup>
+              </fieldset>
 
-          <Separator />
+              <Separator />
 
-          <fieldset className="grid gap-3">
-            <legend className="mb-1 text-sm font-bold">Tipo de cobrança</legend>
-            <RadioGroup
-              value={draft.priceType ?? ''}
-              onValueChange={(next) =>
-                setDraft((current) => ({
-                  ...current,
-                  priceType: next ? (next as PriceType) : undefined,
-                }))
-              }
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="" id="price-type-any" />
-                <Label htmlFor="price-type-any">Qualquer tipo</Label>
-              </div>
-              {(Object.keys(PRICE_TYPE_LABEL) as PriceType[]).map((type) => (
-                <div key={type} className="flex items-center gap-2">
-                  <RadioGroupItem value={type} id={`price-type-${type}`} />
-                  <Label htmlFor={`price-type-${type}`}>
-                    {PRICE_TYPE_LABEL[type]}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </fieldset>
+              <fieldset className="grid gap-3">
+                <legend className="mb-1 text-sm font-bold">
+                  Tipo de cobrança
+                </legend>
+                <RadioGroup
+                  value={draft.priceType ?? ''}
+                  onValueChange={(next) =>
+                    setDraft((current) => ({
+                      ...current,
+                      priceType: next ? (next as PriceType) : undefined,
+                    }))
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="" id="price-type-any" />
+                    <Label htmlFor="price-type-any">Qualquer tipo</Label>
+                  </div>
+                  {(Object.keys(PRICE_TYPE_LABEL) as PriceType[]).map((type) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <RadioGroupItem value={type} id={`price-type-${type}`} />
+                      <Label htmlFor={`price-type-${type}`}>
+                        {PRICE_TYPE_LABEL[type]}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </fieldset>
+            </>
+          ) : null}
 
           {hasCoordinates ? (
             <>

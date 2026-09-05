@@ -1,14 +1,20 @@
 import { apiRequest } from '@/lib/api'
+import type { ServiceCategory } from '@/lib/categories'
 import type { City } from '@/lib/locations'
 
 export type UpdateProfileInput = {
-  name: string | null
+  name?: string | null
   headline?: string | null
   bio?: string | null
   whatsapp?: string | null
   instagram?: string | null
   website?: string | null
   cityId?: number | null
+}
+
+export type ProviderProfileInput = {
+  isProvider: boolean
+  categoryIds?: number[]
 }
 
 export type User = {
@@ -24,6 +30,9 @@ export type User = {
   website: string | null
   cityId: number | null
   city?: City
+  isProvider: boolean
+  providerSince: string | null
+  providerCategories?: ServiceCategory[]
   createdAt: string
   updatedAt: string | null
 }
@@ -74,6 +83,14 @@ export const authApi = {
 
   updateProfile(token: string, input: UpdateProfileInput) {
     return apiRequest<User>('/account/profile', {
+      method: 'PUT',
+      body: input,
+      token,
+    })
+  },
+
+  updateProvider(token: string, input: ProviderProfileInput) {
+    return apiRequest<User>('/account/provider', {
       method: 'PUT',
       body: input,
       token,

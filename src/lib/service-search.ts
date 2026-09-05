@@ -1,9 +1,20 @@
+import type { ProviderSort, SearchProvidersParams } from '@/lib/providers'
 import type {
   PriceType,
+  SearchServicesParams,
   ServiceMode,
   ServiceSort,
   ServiceType,
 } from '@/lib/services'
+
+const VIEWS: SearchView[] = ['services', 'providers']
+
+const PROVIDER_SORTS: ProviderSort[] = [
+  'relevance',
+  'distance',
+  'rating',
+  'recent',
+]
 
 const SORTS: ServiceSort[] = [
   'relevance',
@@ -24,7 +35,10 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export const MAX_CATEGORY_FILTERS = 10
 
+export type SearchView = 'services' | 'providers'
+
 export type ServiceSearch = {
+  view?: SearchView
   type?: ServiceType
   q?: string
   category?: string
@@ -107,6 +121,7 @@ export function validateServiceSearch(
   const minRating = positive(search.minRating)
 
   return {
+    view: oneOf(search.view, VIEWS),
     type: oneOf(search.type, TYPES),
     q: text(search.q),
     category: categories.length > 0 ? categories.join(',') : undefined,
@@ -126,6 +141,43 @@ export function validateServiceSearch(
 
 export function hasActiveFilters(search: ServiceSearch) {
   return Object.entries(search).some(
-    ([key, value]) => key !== 'sort' && value !== undefined,
+    ([key, value]) => key !== 'sort' && key !== 'view' && value !== undefined,
   )
+}
+
+export function isProvidersView(search: ServiceSearch) {
+  return search.view === 'providers'
+}
+
+export function toServiceSearch(search: ServiceSearch): SearchServicesParams {
+  return {
+    type: search.type,
+    q: search.q,
+    category: search.category,
+    cityId: search.cityId,
+    state: search.state,
+    latitude: search.latitude,
+    longitude: search.longitude,
+    radiusKm: search.radiusKm,
+    minPriceCents: search.minPriceCents,
+    maxPriceCents: search.maxPriceCents,
+    minRating: search.minRating,
+    mode: search.mode,
+    priceType: search.priceType,
+    sort: search.sort,
+  }
+}
+
+export function toProviderSearch(search: ServiceSearch): SearchProvidersParams {
+  return {
+    q: search.q,
+    category: search.category,
+    cityId: search.cityId,
+    state: search.state,
+    latitude: search.latitude,
+    longitude: search.longitude,
+    radiusKm: search.radiusKm,
+    minRating: search.minRating,
+    sort: oneOf(search.sort, PROVIDER_SORTS),
+  }
 }

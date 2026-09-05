@@ -29,6 +29,9 @@ export const profileSchema = z.object({
     'A chamada pode ter no máximo 120 caracteres.',
   ),
   bio: optionalText(2000, 'A apresentação pode ter no máximo 2000 caracteres.'),
+})
+
+export const contactsSchema = z.object({
   whatsapp: z.union([
     z.literal(''),
     z
@@ -58,3 +61,4 @@ export const profileSchema = z.object({
 export type SignInValues = z.infer<typeof signInSchema>
 export type SignUpValues = z.infer<typeof signUpSchema>
 export type ProfileValues = z.infer<typeof profileSchema>
+export type ContactsValues = z.infer<typeof contactsSchema>

@@ -141,6 +141,9 @@ export type PublicProfile = {
   ratingAverage: number
   reviewsCount: number
   city?: City
+  isProvider: boolean
+  providerSince: string | null
+  providerCategories?: ServiceCategory[]
   services?: Service[]
   createdAt: string
 }

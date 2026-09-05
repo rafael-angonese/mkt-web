@@ -5,34 +5,49 @@ import { useEffect, useRef } from 'react'
 
 import { LogoMark } from '@/components/brand/logo'
 import { CategoryCarousel } from '@/components/discovery/category-carousel'
+import {
+  ProviderCard,
+  ProviderCardSkeleton,
+} from '@/components/discovery/provider-card'
 import { SearchBar } from '@/components/discovery/search-bar'
 import { SearchEmptyState } from '@/components/discovery/search-empty-state'
 import {
   type SearchFiltersValue,
   SearchFilters,
 } from '@/components/discovery/search-filters'
+import { SearchViewTabs } from '@/components/discovery/search-view-tabs'
 import {
   ServiceCard,
   ServiceCardSkeleton,
 } from '@/components/discovery/service-card'
 import { ServiceTypeTabs } from '@/components/discovery/service-type-tabs'
-import { SortSelect } from '@/components/discovery/sort-select'
+import {
+  PROVIDER_SORT_OPTIONS,
+  SERVICE_SORT_OPTIONS,
+  SortSelect,
+} from '@/components/discovery/sort-select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Heading } from '@/components/ui/heading'
+import type { ProviderSort } from '@/lib/providers'
 import {
   categoriesQueryOptions,
   cityQueryOptions,
+  providerListQueryOptions,
   serviceListQueryOptions,
 } from '@/lib/queries'
 import {
   type ServiceSearch,
   hasActiveFilters,
+  isProvidersView,
   selectedCategories,
+  toProviderSearch,
+  toServiceSearch,
   toggleCategory,
   validateServiceSearch,
 } from '@/lib/service-search'
+import type { ServiceSort } from '@/lib/services'
 import { cn } from '@/utils/cn'
 
 const SKELETON_KEYS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8']
@@ -41,6 +56,12 @@ const RESULT_NOUN = {
   all: { titlePrefix: 'Anúncios', singular: 'anúncio', plural: 'anúncios' },
   offer: { titlePrefix: 'Serviços', singular: 'serviço', plural: 'serviços' },
   request: { titlePrefix: 'Pedidos', singular: 'pedido', plural: 'pedidos' },
+}
+
+const PROVIDER_NOUN = {
+  titlePrefix: 'Profissionais',
+  singular: 'profissional',
+  plural: 'profissionais',
 }
 
 const STEPS = [
@@ -85,7 +106,13 @@ export const Route = createFileRoute('/')({
 
     await Promise.all([
       context.queryClient.ensureQueryData(categoriesQueryOptions),
-      context.queryClient.ensureInfiniteQueryData(serviceListQueryOptions(deps)),
+      isProvidersView(deps)
+        ? context.queryClient.ensureInfiniteQueryData(
+            providerListQueryOptions(toProviderSearch(deps)),
+          )
+        : context.queryClient.ensureInfiniteQueryData(
+            serviceListQueryOptions(toServiceSearch(deps)),
+          ),
       deps.cityId
         ? context.queryClient
             .ensureQueryData(cityQueryOptions(deps.cityId))
@@ -95,11 +122,16 @@ export const Route = createFileRoute('/')({
   },
 })
 
-function useInfiniteServices(search: ServiceSearch) {
-  const query = useInfiniteQuery(serviceListQueryOptions(search))
+function useFeedSentinel({
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+}: {
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  fetchNextPage: () => unknown
+}) {
   const sentinel = useRef<HTMLDivElement>(null)
-
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query
 
   useEffect(() => {
     const node = sentinel.current
@@ -122,12 +154,13 @@ function useInfiniteServices(search: ServiceSearch) {
     return () => observer.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  return { ...query, sentinel }
+  return sentinel
 }
 
 function Home() {
   const navigate = useNavigate()
   const search = Route.useSearch()
+  const isProviders = isProvidersView(search)
 
   const { data: categories = [] } = useQuery(categoriesQueryOptions)
   const { data: city } = useQuery({
@@ -135,17 +168,22 @@ function Home() {
     enabled: search.cityId !== undefined,
   })
 
-  const {
-    data,
-    status,
-    isFetching,
-    isFetchingNextPage,
-    isPlaceholderData,
-    hasNextPage,
-    sentinel,
-  } = useInfiniteServices(search)
+  const servicesQuery = useInfiniteQuery({
+    ...serviceListQueryOptions(toServiceSearch(search)),
+    enabled: !isProviders,
+  })
+  const providersQuery = useInfiniteQuery({
+    ...providerListQueryOptions(toProviderSearch(search)),
+    enabled: isProviders,
+  })
 
-  const services = data?.pages.flatMap((page) => page.data) ?? []
+  const feed = isProviders ? providersQuery : servicesQuery
+  const sentinel = useFeedSentinel(feed)
+
+  const services = servicesQuery.data?.pages.flatMap((page) => page.data) ?? []
+  const providers = providersQuery.data?.pages.flatMap((page) => page.data) ?? []
+  const total = isProviders ? providers.length : services.length
+
   const activeSlugs = selectedCategories(search)
   const activeCategories = categories.filter((entry) =>
     activeSlugs.includes(entry.slug),
@@ -153,7 +191,8 @@ function Home() {
   const cityLabel = city?.label ?? null
   const hasCoordinates =
     search.latitude !== undefined && search.longitude !== undefined
-  const isInitialLoading = status === 'pending'
+  const isInitialLoading = feed.status === 'pending'
+  const { hasNextPage } = feed
 
   const categoryLabel =
     activeCategories.length === 1
@@ -162,16 +201,30 @@ function Home() {
         ? `${activeCategories.length} categorias`
         : null
 
-  const noun = RESULT_NOUN[search.type ?? 'all']
+  const noun = isProviders ? PROVIDER_NOUN : RESULT_NOUN[search.type ?? 'all']
 
   const title = categoryLabel
-    ? `${categoryLabel}${cityLabel ? ` em ${cityLabel}` : ''}`
+    ? `${isProviders ? `${noun.titlePrefix} · ` : ''}${categoryLabel}${cityLabel ? ` em ${cityLabel}` : ''}`
     : cityLabel
       ? `${noun.titlePrefix} em ${cityLabel}`
       : `${noun.titlePrefix} perto de você`
 
+  const sort = search.sort ?? (hasCoordinates ? 'distance' : 'relevance')
+
   function update(next: Partial<ServiceSearch>) {
     navigate({ to: '/', search: (current) => ({ ...current, ...next }) })
+  }
+
+  function onChangeView(view: 'services' | 'providers') {
+    update({
+      view: view === 'providers' ? 'providers' : undefined,
+      type: undefined,
+      minPriceCents: undefined,
+      maxPriceCents: undefined,
+      mode: undefined,
+      priceType: undefined,
+      sort: undefined,
+    })
   }
 
   function onApplyFilters(filters: SearchFiltersValue) {
@@ -202,14 +255,23 @@ function Home() {
               de você.
             </Heading>
             <p className="mt-5 max-w-2xl text-lg text-white/75">
-              Diaristas, eletricistas, encanadores, pintores e muito mais — com
-              preço, foto e avaliação de quem já contratou.
+              {isProviders
+                ? 'Conheça os profissionais da sua região: veja as categorias que atendem, avaliações e fale direto com eles.'
+                : 'Diaristas, eletricistas, encanadores, pintores e muito mais — com preço, foto e avaliação de quem já contratou.'}
             </p>
 
-            <div className="mt-8 max-w-3xl">
+            <div className="mt-6">
+              <SearchViewTabs
+                value={isProviders ? 'providers' : 'services'}
+                onChange={onChangeView}
+              />
+            </div>
+
+            <div className="mt-4 max-w-3xl">
               <SearchBar
                 defaultQuery={search.q ?? ''}
                 category={search.category}
+                placeholderKind={isProviders ? 'providers' : 'services'}
               />
             </div>
           </div>
@@ -234,37 +296,55 @@ function Home() {
             <p className="mt-1 text-sm text-muted-foreground">
               {isInitialLoading
                 ? `Carregando ${noun.plural}...`
-                : services.length === 0
+                : total === 0
                   ? 'Nenhum resultado'
-                  : `${services.length}${hasNextPage ? '+' : ''} ${services.length === 1 ? `${noun.singular} encontrado` : `${noun.plural} encontrados`}`}
+                  : `${total}${hasNextPage ? '+' : ''} ${total === 1 ? `${noun.singular} encontrado` : `${noun.plural} encontrados`}`}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <ServiceTypeTabs
-              value={search.type}
-              onChange={(type) => update({ type })}
-            />
+            {isProviders ? null : (
+              <ServiceTypeTabs
+                value={search.type}
+                onChange={(type) => update({ type })}
+              />
+            )}
             <SearchFilters
               city={city ?? null}
-              value={{
-                cityId: search.cityId,
-                minPriceCents: search.minPriceCents,
-                maxPriceCents: search.maxPriceCents,
-                minRating: search.minRating,
-                mode: search.mode,
-                priceType: search.priceType,
-                radiusKm: search.radiusKm,
-              }}
+              scope={isProviders ? 'providers' : 'services'}
+              value={
+                isProviders
+                  ? {
+                      cityId: search.cityId,
+                      minRating: search.minRating,
+                      radiusKm: search.radiusKm,
+                    }
+                  : {
+                      cityId: search.cityId,
+                      minPriceCents: search.minPriceCents,
+                      maxPriceCents: search.maxPriceCents,
+                      minRating: search.minRating,
+                      mode: search.mode,
+                      priceType: search.priceType,
+                      radiusKm: search.radiusKm,
+                    }
+              }
               onApply={onApplyFilters}
               hasCoordinates={hasCoordinates}
             />
-            <SortSelect
-              value={
-                search.sort ?? (hasCoordinates ? 'distance' : 'relevance')
-              }
-              onChange={(sort) => update({ sort })}
-            />
+            {isProviders ? (
+              <SortSelect
+                value={sort as ProviderSort}
+                options={PROVIDER_SORT_OPTIONS}
+                onChange={(next) => update({ sort: next })}
+              />
+            ) : (
+              <SortSelect
+                value={sort as ServiceSort}
+                options={SERVICE_SORT_OPTIONS}
+                onChange={(next) => update({ sort: next })}
+              />
+            )}
           </div>
         </div>
 
@@ -299,7 +379,7 @@ function Home() {
               </Link>
             ) : null}
 
-            <Link to="/" search={{}}>
+            <Link to="/" search={{ view: search.view }}>
               <Badge variant="outline" className="cursor-pointer gap-1">
                 <X aria-hidden="true" className="size-3" />
                 Limpar
@@ -309,42 +389,79 @@ function Home() {
         ) : null}
 
         {isInitialLoading ? (
-          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {SKELETON_KEYS.map((key) => (
-              <ServiceCardSkeleton key={key} />
-            ))}
-          </div>
-        ) : services.length === 0 ? (
+          isProviders ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SKELETON_KEYS.slice(0, 6).map((key) => (
+                <ProviderCardSkeleton key={key} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {SKELETON_KEYS.map((key) => (
+                <ServiceCardSkeleton key={key} />
+              ))}
+            </div>
+          )
+        ) : total === 0 ? (
           <div className="mt-8">
             {hasActiveFilters(search) ? (
-              <SearchEmptyState city={cityLabel} />
+              <SearchEmptyState
+                city={cityLabel}
+                scope={isProviders ? 'providers' : 'services'}
+              />
             ) : (
               <Card className="rounded-2xl p-8 text-center">
                 <Heading variant="h4">
-                  Ainda não há {noun.plural} publicados por aqui.
+                  {isProviders
+                    ? 'Ainda não há profissionais cadastrados por aqui.'
+                    : `Ainda não há ${noun.plural} publicados por aqui.`}
                 </Heading>
                 <p className="mt-2 text-muted-foreground">
-                  Seja o primeiro a anunciar na sua cidade.
+                  {isProviders
+                    ? 'Cadastre-se como prestador de serviço e apareça nesta busca.'
+                    : 'Seja o primeiro a anunciar na sua cidade.'}
                 </p>
                 <Button asChild className="mt-5">
-                  <Link to="/publish">Publicar meu serviço</Link>
+                  <Link to={isProviders ? '/account' : '/publish'}>
+                    {isProviders
+                      ? 'Tornar-me prestador'
+                      : 'Publicar meu serviço'}
+                  </Link>
                 </Button>
               </Card>
             )}
           </div>
+        ) : isProviders ? (
+          <div
+            aria-busy={providersQuery.isFetching}
+            className={cn(
+              'mt-6 grid gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3',
+              providersQuery.isPlaceholderData && 'opacity-60',
+            )}
+          >
+            {providers.map((provider) => (
+              <ProviderCard key={provider.id} provider={provider} />
+            ))}
+
+            {providersQuery.isFetchingNextPage
+              ? SKELETON_KEYS.slice(0, 3).map((key) => (
+                  <ProviderCardSkeleton key={key} />
+                ))
+              : null}
+          </div>
         ) : (
           <div
-            aria-busy={isFetching}
+            aria-busy={servicesQuery.isFetching}
             className={cn(
               'mt-6 grid grid-cols-2 gap-x-4 gap-y-8 transition-opacity sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
-              isPlaceholderData && 'opacity-60',
+              servicesQuery.isPlaceholderData && 'opacity-60',
             )}
           >
             {services.map((service) => (
               <ServiceCard key={service.id} service={service} />
             ))}
 
-            {isFetchingNextPage
+            {servicesQuery.isFetchingNextPage
               ? SKELETON_KEYS.slice(0, 5).map((key) => (
                   <ServiceCardSkeleton key={key} />
                 ))
@@ -354,7 +471,7 @@ function Home() {
 
         <div ref={sentinel} aria-hidden="true" className="h-px" />
 
-        {!hasNextPage && services.length > 0 ? (
+        {!hasNextPage && total > 0 ? (
           <p className="mt-10 text-center text-sm text-muted-foreground">
             Você chegou ao fim da lista.
           </p>
@@ -401,6 +518,11 @@ function Home() {
                 <Button asChild variant="outline-primary">
                   <Link to="/services">Ver categorias</Link>
                 </Button>
+                <Button asChild variant="outline">
+                  <Link to="/" search={{ view: 'providers' }}>
+                    Ver profissionais
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -409,12 +531,21 @@ function Home() {
                 Você presta serviços?
               </Heading>
               <p className="mt-2 text-white/70">
-                Publique quantos serviços quiser, com fotos e preço, e receba
-                contatos de clientes da sua região.
+                Ative seu perfil de prestador, escolha as categorias que você
+                atende e apareça na busca por profissionais.
               </p>
-              <Button asChild variant="brand" className="mt-5">
-                <Link to="/publish">Publicar serviço</Link>
-              </Button>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Button asChild variant="brand">
+                  <Link to="/publish">Publicar serviço</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                >
+                  <Link to="/account">Tornar-me prestador</Link>
+                </Button>
+              </div>
             </div>
           </section>
         </>

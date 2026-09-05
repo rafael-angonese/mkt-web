@@ -19,6 +19,9 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as UiRouteImport } from './routes/ui'
+import { Route as AccountContactsRouteImport } from './routes/account_.contacts'
+import { Route as AccountProfileRouteImport } from './routes/account_.profile'
+import { Route as AccountProviderRouteImport } from './routes/account_.provider'
 import { Route as AccountServicesRouteImport } from './routes/account_.services'
 import { Route as ChatsIndexRouteImport } from './routes/chats.index'
 import { Route as ChatsConversationIdRouteImport } from './routes/chats.$conversationId'
@@ -77,6 +80,21 @@ const UiRoute = UiRouteImport.update({
   path: '/ui',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountContactsRoute = AccountContactsRouteImport.update({
+  id: '/account_/contacts',
+  path: '/account/contacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountProfileRoute = AccountProfileRouteImport.update({
+  id: '/account_/profile',
+  path: '/account/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountProviderRoute = AccountProviderRouteImport.update({
+  id: '/account_/provider',
+  path: '/account/provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountServicesRoute = AccountServicesRouteImport.update({
   id: '/account_/services',
   path: '/account/services',
@@ -125,6 +143,9 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/ui': typeof UiRoute
+  '/account/contacts': typeof AccountContactsRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/provider': typeof AccountProviderRoute
   '/account/services': typeof AccountServicesRoute
   '/chats/$conversationId': typeof ChatsConversationIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
@@ -143,6 +164,9 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/ui': typeof UiRoute
+  '/account/contacts': typeof AccountContactsRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/provider': typeof AccountProviderRoute
   '/account/services': typeof AccountServicesRoute
   '/chats/$conversationId': typeof ChatsConversationIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
@@ -163,6 +187,9 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/ui': typeof UiRoute
+  '/account_/contacts': typeof AccountContactsRoute
+  '/account_/profile': typeof AccountProfileRoute
+  '/account_/provider': typeof AccountProviderRoute
   '/account_/services': typeof AccountServicesRoute
   '/chats/$conversationId': typeof ChatsConversationIdRoute
   '/profile/$userId': typeof ProfileUserIdRoute
@@ -184,6 +211,9 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/ui'
+    | '/account/contacts'
+    | '/account/profile'
+    | '/account/provider'
     | '/account/services'
     | '/chats/$conversationId'
     | '/profile/$userId'
@@ -202,6 +232,9 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/ui'
+    | '/account/contacts'
+    | '/account/profile'
+    | '/account/provider'
     | '/account/services'
     | '/chats/$conversationId'
     | '/profile/$userId'
@@ -221,6 +254,9 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/ui'
+    | '/account_/contacts'
+    | '/account_/profile'
+    | '/account_/provider'
     | '/account_/services'
     | '/chats/$conversationId'
     | '/profile/$userId'
@@ -241,6 +277,9 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   UiRoute: typeof UiRoute
+  AccountContactsRoute: typeof AccountContactsRoute
+  AccountProfileRoute: typeof AccountProfileRoute
+  AccountProviderRoute: typeof AccountProviderRoute
   AccountServicesRoute: typeof AccountServicesRoute
   ProfileUserIdRoute: typeof ProfileUserIdRoute
   ServicesServiceIdRoute: typeof ServicesServiceIdRoute
@@ -320,6 +359,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account_/contacts': {
+      id: '/account_/contacts'
+      path: '/account/contacts'
+      fullPath: '/account/contacts'
+      preLoaderRoute: typeof AccountContactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_/profile': {
+      id: '/account_/profile'
+      path: '/account/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AccountProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_/provider': {
+      id: '/account_/provider'
+      path: '/account/provider'
+      fullPath: '/account/provider'
+      preLoaderRoute: typeof AccountProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account_/services': {
       id: '/account_/services'
       path: '/account/services'
@@ -395,6 +455,9 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   UiRoute: UiRoute,
+  AccountContactsRoute: AccountContactsRoute,
+  AccountProfileRoute: AccountProfileRoute,
+  AccountProviderRoute: AccountProviderRoute,
   AccountServicesRoute: AccountServicesRoute,
   ProfileUserIdRoute: ProfileUserIdRoute,
   ServicesServiceIdRoute: ServicesServiceIdRoute,

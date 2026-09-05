@@ -1,3 +1,4 @@
+import type { ProviderSort } from '@/lib/providers'
 import type { ServiceSort } from '@/lib/services'
 import {
   Select,
@@ -7,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const OPTIONS: { value: ServiceSort; label: string }[] = [
+export const SERVICE_SORT_OPTIONS: { value: ServiceSort; label: string }[] = [
   { value: 'relevance', label: 'Mais relevantes' },
   { value: 'distance', label: 'Mais perto' },
   { value: 'rating', label: 'Melhor avaliados' },
@@ -16,20 +17,29 @@ const OPTIONS: { value: ServiceSort; label: string }[] = [
   { value: 'recent', label: 'Mais recentes' },
 ]
 
-export function SortSelect({
+export const PROVIDER_SORT_OPTIONS: { value: ProviderSort; label: string }[] = [
+  { value: 'relevance', label: 'Mais relevantes' },
+  { value: 'distance', label: 'Mais perto' },
+  { value: 'rating', label: 'Melhor avaliados' },
+  { value: 'recent', label: 'Novos por aqui' },
+]
+
+export function SortSelect<Option extends string>({
   value,
   onChange,
+  options,
 }: {
-  value: ServiceSort
-  onChange: (value: ServiceSort) => void
+  value: Option
+  onChange: (value: Option) => void
+  options: { value: Option; label: string }[]
 }) {
   return (
-    <Select value={value} onValueChange={(next) => onChange(next as ServiceSort)}>
+    <Select value={value} onValueChange={(next) => onChange(next as Option)}>
       <SelectTrigger className="h-10 w-full rounded-full sm:w-52">
         <SelectValue placeholder="Ordenar" />
       </SelectTrigger>
       <SelectContent>
-        {OPTIONS.map((option) => (
+        {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>

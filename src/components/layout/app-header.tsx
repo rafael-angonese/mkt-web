@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { Heart, MessagesSquare } from 'lucide-react'
 
 import { Logo } from '@/components/brand/logo'
@@ -7,11 +7,69 @@ import { UserMenu } from '@/components/layout/user-menu'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/providers/auth-context'
 import { useChat } from '@/providers/chat-context'
+import { cn } from '@/utils/cn'
 
-const NAV_ITEMS = [
-  { to: '/', label: 'Buscar', exact: true },
-  { to: '/services', label: 'Categorias', exact: false },
-] as const
+const NAV_LINK_CLASS =
+  'rounded-md py-1 text-muted-foreground transition-colors hover:text-foreground'
+
+const NAV_LINK_ACTIVE_CLASS = 'text-primary dark:text-dodo-orange'
+
+function useActiveNav() {
+  return useRouterState({
+    select: (state) => {
+      if (state.location.pathname === '/') {
+        return (state.location.search as { view?: string }).view === 'providers'
+          ? 'providers'
+          : 'search'
+      }
+
+      return state.location.pathname.startsWith('/services')
+        ? 'categories'
+        : 'none'
+    },
+  })
+}
+
+function MainNav() {
+  const active = useActiveNav()
+
+  return (
+    <nav
+      aria-label="Principal"
+      className="hidden items-center gap-6 font-display text-sm font-bold md:flex"
+    >
+      <Link
+        to="/"
+        search={{}}
+        className={cn(
+          NAV_LINK_CLASS,
+          active === 'search' && NAV_LINK_ACTIVE_CLASS,
+        )}
+      >
+        Buscar
+      </Link>
+      <Link
+        to="/"
+        search={{ view: 'providers' }}
+        className={cn(
+          NAV_LINK_CLASS,
+          active === 'providers' && NAV_LINK_ACTIVE_CLASS,
+        )}
+      >
+        Profissionais
+      </Link>
+      <Link
+        to="/services"
+        className={cn(
+          NAV_LINK_CLASS,
+          active === 'categories' && NAV_LINK_ACTIVE_CLASS,
+        )}
+      >
+        Categorias
+      </Link>
+    </nav>
+  )
+}
 
 function ChatButton() {
   const { status } = useAuth()
@@ -41,22 +99,7 @@ export function AppHeader() {
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-6">
         <Logo className="h-9 md:h-10" />
 
-        <nav
-          aria-label="Principal"
-          className="hidden items-center gap-6 font-display text-sm font-bold md:flex"
-        >
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              activeOptions={{ exact: item.exact }}
-              className="rounded-md py-1 text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: 'text-primary dark:text-dodo-orange' }}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <MainNav />
 
         <div className="flex items-center gap-1 md:gap-2">
           <Button

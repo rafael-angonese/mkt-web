@@ -2,9 +2,11 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+import { CategoryIcon } from '@/components/discovery/category-icon'
 import { ServiceCard } from '@/components/discovery/service-card'
 import { UserReviews } from '@/components/profile/user-reviews'
 import { ProviderPanel } from '@/components/service/provider-panel'
+import { Badge } from '@/components/ui/badge'
 import { Heading } from '@/components/ui/heading'
 import { Separator } from '@/components/ui/separator'
 import { ApiError } from '@/lib/api'
@@ -41,12 +43,27 @@ export const Route = createFileRoute('/profile/$userId')({
 function Perfil() {
   const { profile } = Route.useLoaderData()
   const services = profile.services ?? []
+  const providerCategories = profile.providerCategories ?? []
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10 md:px-6">
       <div className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-24 lg:h-fit">
           <ProviderPanel provider={profile} showProfileLink={false} />
+
+          {profile.isProvider && providerCategories.length > 0 ? (
+            <div className="mt-4 px-1">
+              <p className="text-sm font-bold">Categorias que atende</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {providerCategories.map((category) => (
+                  <Badge key={category.id} variant="secondary" className="gap-1">
+                    <CategoryIcon name={category.icon} className="size-3.5" />
+                    {category.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <p className="mt-4 px-1 text-sm text-muted-foreground">
             No DodoPlace desde{' '}

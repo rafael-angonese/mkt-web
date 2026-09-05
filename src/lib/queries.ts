@@ -7,9 +7,12 @@ import {
 import { categoriesApi } from '@/lib/categories'
 import { chatApi } from '@/lib/chat'
 import { locationsApi } from '@/lib/locations'
+import { type SearchProvidersParams, providersApi } from '@/lib/providers'
 import { type SearchServicesParams, servicesApi } from '@/lib/services'
 
 export const SERVICES_PAGE_SIZE = 24
+
+export const PROVIDERS_PAGE_SIZE = 24
 
 export const CONVERSATIONS_PAGE_SIZE = 40
 
@@ -91,6 +94,24 @@ export function serviceListQueryOptions(params: SearchServicesParams) {
           ...params,
           cursor: pageParam ?? undefined,
           perPage: SERVICES_PAGE_SIZE,
+        },
+        { signal },
+      ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function providerListQueryOptions(params: SearchProvidersParams) {
+  return infiniteQueryOptions({
+    queryKey: ['providers', params],
+    queryFn: ({ pageParam, signal }) =>
+      providersApi.search(
+        {
+          ...params,
+          cursor: pageParam ?? undefined,
+          perPage: PROVIDERS_PAGE_SIZE,
         },
         { signal },
       ),
